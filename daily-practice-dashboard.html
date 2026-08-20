@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>24-Day Build Tracker</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --card: #ffffff;
+    --border: #e2e0d8;
+    --text: #1f1e1a;
+    --text-secondary: #6b6a63;
+    --text-muted: #9a9890;
+    --accent: #3c3489;
+    --accent-bg: #eeedfe;
+    --accent-text: #26215c;
+    --done-bg: #e1f5ee;
+    --done-text: #085041;
+    --done-border: #5dcaa5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171613;
+      --card: #211f1b;
+      --border: #35332c;
+      --text: #f1efe8;
+      --text-secondary: #b4b2a9;
+      --text-muted: #78766e;
+      --accent: #a29bf2;
+      --accent-bg: #26215c;
+      --accent-text: #cecbf6;
+      --done-bg: #04342c;
+      --done-text: #9fe1cb;
+      --done-border: #0f6e56;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 1.25rem 1rem 3rem;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; }
+
+  .progress-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .progress-top {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
+  }
+  .progress-count { font-size: 26px; font-weight: 600; }
+  .progress-label { font-size: 13px; color: var(--text-secondary); }
+  .bar-track {
+    height: 8px; background: var(--border); border-radius: 999px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; background: var(--accent); border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  .module { margin-bottom: 18px; }
+  .module-title {
+    font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--text-muted); margin: 0 0 8px 4px;
+  }
+
+  .day-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .day-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px;
+    cursor: pointer;
+  }
+  .day-check {
+    flex: none; width: 22px; height: 22px; border-radius: 6px;
+    border: 1.5px solid var(--border); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--done-text); cursor: pointer;
+  }
+  .day-check.checked { background: var(--done-bg); border-color: var(--done-border); }
+  .day-num {
+    flex: none; font-size: 12px; font-weight: 600; color: var(--text-muted);
+    width: 20px;
+  }
+  .day-title { flex: 1; font-size: 14px; font-weight: 500; }
+  .day-title.done { color: var(--text-secondary); text-decoration: line-through; text-decoration-color: var(--text-muted); }
+  .chevron { flex: none; font-size: 12px; color: var(--text-muted); transition: transform 0.15s ease; }
+  .chevron.open { transform: rotate(90deg); }
+
+  .day-body {
+    display: none;
+    padding: 0 12px 14px 52px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .day-body.open { display: block; }
+  .day-body .file {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: var(--accent-bg);
+    color: var(--accent-text);
+    padding: 2px 6px;
+    border-radius: 5px;
+    display: inline-block;
+    margin: 2px 0 8px;
+  }
+  .day-body .practice { margin: 0; line-height: 1.5; }
+  .day-body .practice b { color: var(--text); font-weight: 600; }
+
+  .reset-btn {
+    display: block; margin: 24px auto 0; background: none; border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 12px; padding: 8px 14px; border-radius: 8px;
+    cursor: pointer;
+  }
+  .status { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px; height: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>24-day build tracker</h1>
+  <p class="sub">AI learning platform — tap a day to see the file and today's practice rep.</p>
+
+  <div class="progress-card">
+    <div class="progress-top">
+      <div>
+        <span class="progress-count" id="progressCount">0</span>
+        <span class="progress-label">/ 24 days</span>
+      </div>
+      <div class="progress-label" id="progressPct">0%</div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+  </div>
+
+  <div id="modules"></div>
+
+  <button class="reset-btn" id="resetBtn">Reset progress</button>
+  <div class="status" id="statusMsg"></div>
+</div>
+
+<script>
+const MODULES = [
+  { name: "Module 1 — Gateway ingestion", days: [
+    { d: 1, title: "Schema boundary guardrails", file: "app/models/user.py, app/models/plan.py",
+      practice: "Add a <b>role</b> field to UserRegistration and write a test that rejects an invalid role." },
+    { d: 2, title: "Async processing engine", file: "app/services/task_queue.py",
+      practice: "Submit 5 fake jobs concurrently and print completion order — notice it isn't submission order." },
+    { d: 3, title: "Live web scraper", file: "app/services/scraper.py",
+      practice: "Point the scraper at a real syllabus URL and inspect the cleaned text it returns." },
+    { d: 4, title: "Prompt template compiler", file: "app/services/prompt_compiler.py",
+      practice: "Add a new PromptTemplate for generating flashcards, with its own required_vars." },
+    { d: 5, title: "Gemini gateway + 503 fallback", file: "app/services/llm_client.py",
+      practice: "Set failure_rate=1.0 in MockGeminiClient and watch the fallback path trigger." },
+    { d: 6, title: "Stateful chat engine", file: "app/services/chat_engine.py",
+      practice: "Have a two-turn conversation, then print session.as_transcript() to see state build up." },
+    { d: 7, title: "Full intake pipeline", file: "app/services/pipeline.py",
+      practice: "Ingest a real webpage end to end and read the summary that comes back." },
+  ]},
+  { name: "Module 2 — Structural data control", days: [
+    { d: 8, title: "Nested student profile schema", file: "app/models/student_profile.py",
+      practice: "Record three quiz attempts in a row on one topic and watch mastery_score climb." },
+    { d: 9, title: "Centralized exception handling", file: "app/core/exceptions.py",
+      practice: "Trigger each custom AppError subclass from a scratch route and compare JSON shapes." },
+    { d: 10, title: "Structured function calling", file: "app/services/function_tools.py",
+      practice: "Add a third tool, e.g. explain_topic, to the registry and invoke it." },
+  ]},
+  { name: "Module 3 — Intelligent knowledge retrieval", days: [
+    { d: 11, title: "Semantic text segmentation", file: "app/services/chunking.py",
+      practice: "Chunk a real 2,000-word article and print the length of each chunk." },
+    { d: 12, title: "Vector embeddings", file: "app/services/embeddings.py",
+      practice: "Compare cosine similarity between three sentences you write yourself." },
+    { d: 13, title: "Vector store (index + query)", file: "app/services/vector_store.py",
+      practice: "Add 10 chunks, then query with an unrelated sentence — inspect the low scores." },
+    { d: 14, title: "Complete RAG loop", file: "app/services/rag.py",
+      practice: "Ingest two different documents and ask a question only one of them can answer." },
+  ]},
+  { name: "Module 4 — Multi-agent architecture", days: [
+    { d: 15, title: "LangGraph study-path DAG", file: "app/agents/graph.py",
+      practice: "Add a fourth mode (e.g. 'break') and wire a new conditional edge to it." },
+    { d: 16, title: "Master routing agent", file: "app/agents/router_agent.py",
+      practice: "Type five different phrasings of 'quiz me' and confirm they all route correctly." },
+    { d: 17, title: "Human-in-the-loop gates", file: "app/agents/human_loop.py",
+      practice: "Request approval, reject it, then confirm resume_after_approval raises an error." },
+  ]},
+  { name: "Module 5 — Persistent storage", days: [
+    { d: 18, title: "Persistent chat memory", file: "app/services/memory_store.py",
+      practice: "Save a message, throw away the store instance, reload — confirm it's still there." },
+    { d: 19, title: "Sliding memory window", file: "app/services/memory_window.py",
+      practice: "Feed it 100 short messages with a tiny max_tokens and inspect the resulting summary." },
+  ]},
+  { name: "Module 6 — Enterprise operations", days: [
+    { d: 20, title: "Observability tracing", file: "app/services/observability.py",
+      practice: "Wrap three nested operations in tracer.trace() and print the resulting span tree." },
+    { d: 21, title: "Cost / quota guardrails", file: "app/services/cost_guard.py",
+      practice: "Drop max_queries_per_day to 2 and watch QuotaExceededError fire on the 3rd call." },
+  ]},
+  { name: "Module 7 — API deployment", days: [
+    { d: 22, title: "Production FastAPI wiring", file: "app/main.py, app/api/routes.py",
+      practice: "Open /docs and try every endpoint by hand at least once." },
+    { d: 23, title: "SSE streaming chat", file: "app/api/routes_chat.py",
+      practice: "Watch the token-by-token stream in your browser's network tab." },
+    { d: 24, title: "Docker + docker-compose", file: "Dockerfile, docker-compose.yml",
+      practice: "Read docker-compose.yml line by line and explain what each service does, out loud." },
+  ]},
+];
+
+const STORAGE_KEY = "day-progress";
+let completed = {};
+
+function renderModules() {
+  const root = document.getElementById("modules");
+  root.innerHTML = "";
+  MODULES.forEach(mod => {
+    const modEl = document.createElement("div");
+    modEl.className = "module";
+    const h = document.createElement("p");
+    h.className = "module-title";
+    h.textContent = mod.name;
+    modEl.appendChild(h);
+
+    mod.days.forEach(day => {
+      const row = document.createElement("div");
+      row.className = "day-row";
+
+      const head = document.createElement("div");
+      head.className = "day-head";
+
+      const check = document.createElement("div");
+      check.className = "day-check" + (completed[day.d] ? " checked" : "");
+      check.innerHTML = completed[day.d] ? '<i>&#10003;</i>' : "";
+      check.onclick = (e) => { e.stopPropagation(); toggleDay(day.d); };
+
+      const num = document.createElement("div");
+      num.className = "day-num";
+      num.textContent = day.d;
+
+      const title = document.createElement("div");
+      title.className = "day-title" + (completed[day.d] ? " done" : "");
+      title.textContent = day.title;
+
+      const chev = document.createElement("div");
+      chev.className = "chevron";
+      chev.textContent = "\u203A";
+
+      head.appendChild(check);
+      head.appendChild(num);
+      head.appendChild(title);
+      head.appendChild(chev);
+
+      const body = document.createElement("div");
+      body.className = "day-body";
+      body.innerHTML = `<div class="file">${day.file}</div><p class="practice"><b>Today's rep:</b> ${day.practice}</p>`;
+
+      head.onclick = () => {
+        body.classList.toggle("open");
+        chev.classList.toggle("open");
+      };
+
+      row.appendChild(head);
+      row.appendChild(body);
+      modEl.appendChild(row);
+    });
+
+    root.appendChild(modEl);
+  });
+}
+
+function renderProgress() {
+  const total = 24;
+  const done = Object.values(completed).filter(Boolean).length;
+  document.getElementById("progressCount").textContent = done;
+  document.getElementById("progressPct").textContent = Math.round((done / total) * 100) + "%";
+  document.getElementById("barFill").style.width = (done / total) * 100 + "%";
+}
+
+async function toggleDay(dayNum) {
+  completed[dayNum] = !completed[dayNum];
+  renderModules();
+  renderProgress();
+  await saveProgress();
+}
+
+async function saveProgress() {
+  const statusEl = document.getElementById("statusMsg");
+  try {
+    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(completed), false);
+    if (!result) {
+      statusEl.textContent = "Couldn't save progress — try again.";
+    } else {
+      statusEl.textContent = "";
+    }
+  } catch (err) {
+    statusEl.textContent = "Couldn't save progress — try again.";
+  }
+}
+
+async function loadProgress() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY, false);
+    completed = result && result.value ? JSON.parse(result.value) : {};
+  } catch (err) {
+    completed = {};
+  }
+  renderModules();
+  renderProgress();
+}
+
+document.getElementById("resetBtn").onclick = async () => {
+  completed = {};
+  renderModules();
+  renderProgress();
+  try {
+    await window.storage.delete(STORAGE_KEY, false);
+  } catch (err) {
+    // key may not exist yet — fine
+  }
+};
+
+loadProgress();
+</script>
+</body>
+</html>
